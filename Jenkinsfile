@@ -5,11 +5,6 @@ pipeline {
         maven 'Maven'
     }
 
-    environment {
-        COMMIT_HASH = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-        CHANGED_SERVICES = ""
-    }
-
     stages {
         stage('Detect Changes') {
             steps {
@@ -30,8 +25,10 @@ pipeline {
                         detected = ['discovery-server', 'config-server']
                     }
 
-                    CHANGED_SERVICES = detected.join(',')
-                    echo "📦 Các service thay đổi: ${CHANGED_SERVICES}"
+                    // Lưu kết quả vào biến trong currentBuild để dùng ở stage sau
+                    currentBuild.displayName = "#${BUILD_NUMBER} ${detected.join(',')}"
+                    // Ghi vào file tạm
+                    writeFile file: 'changed_services.txt', text: detected.join(',')
                 }
             }
         }
@@ -39,7 +36,10 @@ pipeline {
         stage('Build Services') {
             steps {
                 script {
-                    def services = CHANGED_SERVICES.tokenize(',')
+                    // Đọc lại danh sách service từ file
+                    def changed = readFile('changed_services.txt').trim()
+                    def services = changed.tokenize(',')
+
                     for (svc in services) {
                         dir(svc) {
                             if (!fileExists('pom.xml')) {
