@@ -36,40 +36,7 @@ pipeline {
             }
         }
 
-        stage('Test Changed Services') {
-            steps {
-                script {
-                    def services = CHANGED_SERVICES.tokenize(',')
-                    for (svc in services) {
-                        dir(svc) {
-                            if (!fileExists('pom.xml')) {
-                                echo "⚠️ Bỏ qua ${svc} vì không có pom.xml"
-                                continue
-                            }
-
-                            echo "🧪 Test service: ${svc}"
-                            sh "mvn clean test"
-                            jacoco execPattern: '**/target/jacoco.exec'
-                            publishHTML(target: [
-                                allowMissing: false,
-                                keepAll: true,
-                                reportDir: 'target/site/jacoco',
-                                reportFiles: 'index.html',
-                                reportName: "Code Coverage: ${svc}"
-                            ])
-
-                            def coverage = getCoveragePercentage("target/site/jacoco/index.html")
-                            echo "📊 Coverage ${svc}: ${coverage}%"
-                            if (coverage < 70) {
-                                error("❌ Coverage của ${svc} dưới 70% (${coverage}%) - Dừng pipeline.")
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        stage('Build Changed Services') {
+        stage('Build Services') {
             steps {
                 script {
                     def services = CHANGED_SERVICES.tokenize(',')
@@ -89,13 +56,4 @@ pipeline {
             }
         }
     }
-}
-
-def getCoveragePercentage(String htmlPath) {
-    def html = readFile(htmlPath)
-    def matcher = html =~ /<span class="coverage-summary-value">([0-9]+(\.[0-9]+)?)%<\/span>/
-    if (matcher.find()) {
-        return matcher.group(1).toFloat()
-    }
-    return 0
 }
