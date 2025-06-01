@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     tools {
-        maven 'Maven' 
+        maven 'Maven'
     }
 
     environment {
@@ -42,6 +42,11 @@ pipeline {
                     def services = CHANGED_SERVICES.tokenize(',')
                     for (svc in services) {
                         dir(svc) {
+                            if (!fileExists('pom.xml')) {
+                                echo "⚠️ Bỏ qua ${svc} vì không có pom.xml"
+                                continue
+                            }
+
                             echo "🧪 Test service: ${svc}"
                             sh "mvn clean test"
                             jacoco execPattern: '**/target/jacoco.exec'
@@ -70,6 +75,11 @@ pipeline {
                     def services = CHANGED_SERVICES.tokenize(',')
                     for (svc in services) {
                         dir(svc) {
+                            if (!fileExists('pom.xml')) {
+                                echo "⚠️ Bỏ qua ${svc} vì không có pom.xml"
+                                continue
+                            }
+
                             echo "🔨 Build service: ${svc}"
                             sh "mvn clean package -DskipTests"
                             archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
